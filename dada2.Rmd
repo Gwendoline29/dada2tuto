@@ -13,6 +13,7 @@ library(dada2)
 
 ```{r}
 install.packages("Rcpp")
+library(Rcpp)
 ```
 
 ### Fichier fastq et définition de la variable
@@ -123,10 +124,12 @@ head(track)
 ### Attribuer une taxonomie
 
 ```{r}
-
+taxa <- assignTaxonomy(seqtab.nochim, "~/tutoriel/dada2tuto/silva_nr_v132_train_set.fa.gz", multithread=TRUE)
 ```
 
-
+```{r}
+taxa <- addSpecies(taxa, "~/tax/silva_species_assignment_v132.fa.gz")
+```
 
 
 
