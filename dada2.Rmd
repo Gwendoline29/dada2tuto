@@ -1,5 +1,5 @@
 ---
-title: "R Notebook"
+title: "Tutoriel dada2"
 output: github_document
 ---
 
@@ -18,12 +18,26 @@ library(Rcpp)
 
 ### Fichier fastq et définition de la variable
 
+path permet de définir la variable.
+
+list.files est une fonction de R qui liste un chemin donc qui affiche tout ce qui se trouve dans le fichier téléchargé.
+
 ```{r}
 path <- "~/dada2tuto/MiSeq_SOP"
 list.files(path)
 ```
 
-### Utilise le nom des fichiers pour définir le nom des échantillons  
+### Utiliser le nom des fichiers fastq pour définir le nom des échantillons
+
+On définit une nouvelle variable.
+
+On ne met que les fichiers qui ont le pattern R1_001.fastq et R2_001.fastq et on les met respectivement dans fnFs et fnRs. On trie aussi l'ordonnée par ordre alphabétique.
+
+Il fait la liste des échantillons. Cela correspond au nom du fichier sans tout ce qu'il y a avec.
+
+On applique ensuite la fonction strsplit. Elle permet de séparer la chaîne de caractères avec "_". On ne prend donc que le premier élément de la suite, ce qui donne F3D0 et ainsi de suite.
+
+La fonction sapply permet d'appliquer cela à tous les éléments de la liste.
 
 ```{r}
 fnFs <- sort(list.files(path, pattern="_R1_001.fastq", full.names = TRUE))
@@ -32,13 +46,31 @@ sample.names <- sapply(strsplit(basename(fnFs), "_"), `[`, 1)
 sample.names
 ```
 
+### Inspecter les profils de qualité de lecture
+
+La fonction plot permet de tracer un graphique.
+
+Le [1:2] signifie que l'on prend seulement les deux premiers fichiers.
+
 ```{r}
 plotQualityProfile(fnFs[1:2])
 ```
 
+En gris, il y a la carte de chaleur qui indique la fréquence du score de qualité à cette position. Il est plutôt bon.
+
+En vert, c'est le score de qualité moyen de chacune des positions de tout le premier fichier. On remarque qu'au début de la séquence, il est plutôt mauvais, puis on voit qu'il augmente, ensuite il y a un plateau et pour finir il diminue. Le score de qualité a tendance à diminuer en général.
+
+En rouge, c'est la proportion des "reads" donc toutes les séquences font la même taille.
+
 ```{r}
 plotQualityProfile(fnRs[1:2])
 ```
+
+### Filtrer et rogner
+
+Pour filtrer les séquences, on utilise le score de qualité.
+
+Un mauvais score de qualité signifie plus d'erreurs. Si on coupe trop, on ne peut pas aligner R1 et R2. Il faut garder la longueur des produits PCR et "reads" illumina.
 
 ```{r}
 filtFs <- file.path(path, "filtered", paste0(sample.names, "_F_filt.fastq.gz"))
@@ -46,6 +78,22 @@ filtRs <- file.path(path, "filtered", paste0(sample.names, "_R_filt.fastq.gz"))
 names(filtFs) <- sample.names
 names(filtRs) <- sample.names
 ```
+
+Utilisation des paramètres de filtrage standard :
+
+-   truncLen permet de tronquer tous les R1 après 240 nucléotides. Donc il enlève les 10 derniers nucléotides de R1. Pour R2, il coupe après 160 nucléotides.
+
+-   maxN=0 dit au logiciel qu'on ne veut pas de nucléotides N car c'est une séquence de très mauvaise qualité.
+
+-   maxEE=c(2,2) indique la somme des scores de qualité et doit être inférieur à 2 pour les R1 et R2. On peut jouer avec ce paramètre et changer si on se rend compte qu'on a trop enlevé.
+
+-   rm.phix enlève les séquences qui correspondent aux virus. C'est une vérification. Le virus avait été rajouté pour augmenter le contrôle qualité pour ses run de séquences. On connaît son génome.
+
+-   multithread permet de savoir si on a plusieurs processeurs sur notre jeu de données. Si oui, il calcule sur les quatre processeurs et en théorie, ça ira quatre fois plus vite.
+
+out est une variable.
+
+Pour chaque fastq : nombre de séquences avant et après filtration.
 
 ```{r}
 out <- filterAndTrim(fnFs, filtFs, fnRs, filtRs, truncLen=c(240,160),
@@ -56,6 +104,8 @@ head(out)
 
 ### Construire un modèle de probabilité d'erreur
 
+On crée un nouvel objet "errF" pour les R1. On crée un nouvel objet "errR" pour les R2.
+
 ```{r}
 errF <- learnErrors(filtFs, multithread=TRUE)
 ```
@@ -64,11 +114,15 @@ errF <- learnErrors(filtFs, multithread=TRUE)
 errR <- learnErrors(filtRs, multithread=TRUE)
 ```
 
+plotErrors génère un graphique des fréquences d'erreurs.
+
 ```{r}
 plotErrors(errF, nominalQ=TRUE)
 ```
 
 ### Application de l'algorithme d'interférence d'échantillon de base aux données de séqences filtrées et découpées
+
+dadaFs est une nouvelle variable et reçoit le résultat de la correction d'erreurs.
 
 ```{r}
 dadaFs <- dada(filtFs, err=errF, multithread=TRUE)
@@ -82,36 +136,60 @@ dadaRs <- dada(filtRs, err=errR, multithread=TRUE)
 dadaFs[[1]]
 ```
 
-### Fusion des lectures appariées
+### Fusionner les lectures appariées
+
+mergers permet de rassembler les séquences.
 
 ```{r}
 mergers <- mergePairs(dadaFs, filtFs, dadaRs, filtRs, verbose=TRUE)
 head(mergers[[1]])
 ```
 
-### Construction d'une table de séquences
+### Construire une table de séquences
+
+Pour chaque séquence, on compte les séquences identiques dans chaque échantillon.
+
+dim est la dimension de la table.
 
 ```{r}
 seqtab <- makeSequenceTable(mergers)
 dim(seqtab)
 ```
 
+20 lignes correspondant aux échantillons et colonnes correspondant aux variantes de séquence.
+
+293 ASV.
+
 ```{r}
 table(nchar(getSequences(seqtab)))
 ```
 
+On regarde la longueur de chaque séquence : une séquence à 251 nucléotides et la majorité des séquences à 253 nucléotides.
+
 ### Supprimer les chimères
+
+Exemple d'une chimère : on a une partie d'un ARN 16S et une autre partie d'un autre ARN 16S.
+
+On prend toutes les séquences et on compare le début et la fin, qui proviennent de la même séquence, avec toute la base de données. Si le début matche avec une séquence et la fin avec une autre, il y a un problème. On a donc à faire à une chimère.
 
 ```{r}
 seqtab.nochim <- removeBimeraDenovo(seqtab, method="consensus", multithread=TRUE, verbose=TRUE)
 dim(seqtab.nochim)
 ```
 
+sum est le nombre de séquences.
+
 ```{r}
 sum(seqtab.nochim)/sum(seqtab)
 ```
 
 ### Suivre les lectures à travers le pipeline
+
+On construit une table "track" avec des colonnes auxquelles on donne un nom.
+
+denoisedF correspond à dadaFs.
+
+dada2 a corrigé les erreurs. De ce fait, on a que des séquences uniques. On remarque qu'il y en a moins dans denoisedF que dans filtered.
 
 ```{r}
 getN <- function(x) sum(getUniques(x))
@@ -121,7 +199,13 @@ rownames(track) <- sample.names
 head(track)
 ```
 
+Ce tableau récapitule tout ce qui a été enlevé depuis le début.
+
 ### Attribuer une taxonomie
+
+On assigne une taxonomie à chacune des séquences.
+
+Pour cela il faut télécharger les fichiers dont on a besoin.
 
 ```{r}
 taxa <- assignTaxonomy(seqtab.nochim, "~/dada2tuto/silva_nr_v132_train_set.fa.gz", multithread=TRUE)
@@ -153,6 +237,8 @@ cat("Of those,", sum(match.ref), "were exact matches to the expected reference s
 
 ### Bonus : Passage à Phyloseq
 
+Phyloseq est le nom du package et de la structure de l'objet. On a les séquences pour faire de l'écologie.
+
 ```{r}
 library(phyloseq); packageVersion("phyloseq")
 ```
@@ -169,6 +255,8 @@ library(ggplot2); packageVersion("ggplot2")
 theme_set(theme_bw())
 ```
 
+samples.out reçoit le nom de la ligne de seqtab.
+
 ```{r}
 samples.out <- rownames(seqtab.nochim)
 subject <- sapply(strsplit(samples.out, "D"), `[`, 1)
@@ -180,6 +268,8 @@ samdf$When <- "Early"
 samdf$When[samdf$Day>100] <- "Late"
 rownames(samdf) <- samples.out
 ```
+
+On crée un objet phyloseq avec la fonction ps.
 
 ```{r}
 ps <- phyloseq(otu_table(seqtab.nochim, taxa_are_rows=FALSE), 
@@ -196,9 +286,13 @@ taxa_names(ps) <- paste0("ASV", seq(ntaxa(ps)))
 ps
 ```
 
+plot_richness montre la richesse de la biodiversité.
+
 ```{r}
 plot_richness(ps, x="Day", measures=c("Shannon", "Simpson"), color="When")
 ```
+
+Les points correspondent aux échantillons.
 
 ```{r}
 ps.prop <- transform_sample_counts(ps, function(otu) otu/sum(otu))
@@ -216,4 +310,4 @@ ps.top20 <- prune_taxa(top20, ps.top20)
 plot_bar(ps.top20, x="Day", fill="Family") + facet_wrap(~When, scales="free_x")
 ```
 
-
+Les couleurs correspondent à des familles.
