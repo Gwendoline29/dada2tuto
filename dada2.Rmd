@@ -3,6 +3,12 @@ title: "Tutoriel dada2"
 output: github_document
 ---
 
+Notre but ici est de dire comment sont réparties les métadonnées, c'est-à-dire transformer les données brutes pour les analyser. 
+
+Pour ce faire, nous allons partir d'un ensemble de fichiers fastq appariés, dont le séquençage d'amplicon provient d'Illumina Miseq 2x250 de la région V4 du gène ARNr 16S et qui ont été démultiplexés par échantillon. 
+
+Ces fichiers fastq ont été générés à partir d'échantillons intestinaux collectés chez une souris après sevrage. 
+
 ### Lire dada2
 
 ```{r}
@@ -60,7 +66,7 @@ En gris, il y a la carte de chaleur qui indique la fréquence du score de qualit
 
 En vert, c'est le score de qualité moyen de chacune des positions de tout le premier fichier. On remarque qu'au début de la séquence, il est plutôt mauvais, puis on voit qu'il augmente, ensuite il y a un plateau et pour finir il diminue. Le score de qualité a tendance à diminuer en général.
 
-En rouge, c'est la proportion des "reads" donc toutes les séquences font la même taille.
+En rouge, c'est la proportion des reads donc toutes les séquences font la même taille.
 
 ```{r}
 plotQualityProfile(fnRs[1:2])
@@ -70,7 +76,7 @@ plotQualityProfile(fnRs[1:2])
 
 Pour filtrer les séquences, on utilise le score de qualité.
 
-Un mauvais score de qualité signifie plus d'erreurs. Si on coupe trop, on ne peut pas aligner R1 et R2. Il faut garder la longueur des produits PCR et "reads" illumina.
+Un mauvais score de qualité signifie plus d'erreurs. Si on coupe trop, on ne peut pas aligner R1 et R2. Il faut garder la longueur des produits PCR et reads Illumina.
 
 ```{r}
 filtFs <- file.path(path, "filtered", paste0(sample.names, "_F_filt.fastq.gz"))
@@ -87,7 +93,7 @@ Utilisation des paramètres de filtrage standard :
 
 -   maxEE=c(2,2) indique la somme des scores de qualité et doit être inférieur à 2 pour les R1 et R2. On peut jouer avec ce paramètre et changer si on se rend compte qu'on a trop enlevé.
 
--   rm.phix enlève les séquences qui correspondent aux virus. C'est une vérification. Le virus avait été rajouté pour augmenter le contrôle qualité pour ses run de séquences. On connaît son génome.
+-   rm.phix enlève les séquences qui correspondent aux virus. C'est une vérification. Le virus avait été rajouté pour augmenter le contrôle qualité pour ses runs de séquences. On connaît son génome.
 
 -   multithread permet de savoir si on a plusieurs processeurs sur notre jeu de données. Si oui, il calcule sur les quatre processeurs et en théorie, ça ira quatre fois plus vite.
 
@@ -158,7 +164,7 @@ dim(seqtab)
 
 20 lignes correspondant aux échantillons et colonnes correspondant aux variantes de séquence.
 
-293 ASV.
+293 amplicon sequence variant (ASV).
 
 ```{r}
 table(nchar(getSequences(seqtab)))
