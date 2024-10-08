@@ -1,6 +1,17 @@
 Tutoriel dada2
 ================
 
+Notre but ici est de dire comment sont réparties les métadonnées,
+c’est-à-dire transformer les données brutes pour les analyser.
+
+Pour ce faire, nous allons partir d’un ensemble de fichiers fastq
+appariés, dont le séquençage d’amplicon provient d’Illumina Miseq 2x250
+de la région V4 du gène ARNr 16S et qui ont été démultiplexés par
+échantillon.
+
+Ces fichiers fastq ont été générés à partir d’échantillons intestinaux
+collectés chez une souris après sevrage.
+
 ### Lire dada2
 
 ``` r
@@ -108,7 +119,7 @@ plutôt mauvais, puis on voit qu’il augmente, ensuite il y a un plateau
 et pour finir il diminue. Le score de qualité a tendance à diminuer en
 général.
 
-En rouge, c’est la proportion des “reads” donc toutes les séquences font
+En rouge, c’est la proportion des reads donc toutes les séquences font
 la même taille.
 
 ``` r
@@ -123,7 +134,7 @@ Pour filtrer les séquences, on utilise le score de qualité.
 
 Un mauvais score de qualité signifie plus d’erreurs. Si on coupe trop,
 on ne peut pas aligner R1 et R2. Il faut garder la longueur des produits
-PCR et “reads” illumina.
+PCR et reads Illumina.
 
 ``` r
 filtFs <- file.path(path, "filtered", paste0(sample.names, "_F_filt.fastq.gz"))
@@ -147,7 +158,7 @@ Utilisation des paramètres de filtrage standard :
 
 - rm.phix enlève les séquences qui correspondent aux virus. C’est une
   vérification. Le virus avait été rajouté pour augmenter le contrôle
-  qualité pour ses run de séquences. On connaît son génome.
+  qualité pour ses runs de séquences. On connaît son génome.
 
 - multithread permet de savoir si on a plusieurs processeurs sur notre
   jeu de données. Si oui, il calcule sur les quatre processeurs et en
@@ -347,7 +358,7 @@ dim(seqtab)
 20 lignes correspondant aux échantillons et colonnes correspondant aux
 variantes de séquence.
 
-293 ASV.
+293 amplicon sequence variant (ASV).
 
 ``` r
 table(nchar(getSequences(seqtab)))
@@ -611,31 +622,31 @@ ord.nmds.bray <- ordinate(ps.prop, method="NMDS", distance="bray")
 ```
 
     ## Run 0 stress 0.08043117 
-    ## Run 1 stress 0.1212044 
-    ## Run 2 stress 0.1212044 
-    ## Run 3 stress 0.08076337 
-    ## ... Procrustes: rmse 0.0104365  max resid 0.03210723 
-    ## Run 4 stress 0.1262108 
-    ## Run 5 stress 0.08616061 
-    ## Run 6 stress 0.08043117 
-    ## ... Procrustes: rmse 1.996527e-06  max resid 5.556511e-06 
+    ## Run 1 stress 0.1326151 
+    ## Run 2 stress 0.09477219 
+    ## Run 3 stress 0.08043117 
+    ## ... Procrustes: rmse 1.332024e-06  max resid 2.809762e-06 
     ## ... Similar to previous best
-    ## Run 7 stress 0.08616061 
+    ## Run 4 stress 0.08076338 
+    ## ... Procrustes: rmse 0.01053408  max resid 0.03242606 
+    ## Run 5 stress 0.08076341 
+    ## ... Procrustes: rmse 0.01057146  max resid 0.03254782 
+    ## Run 6 stress 0.08616061 
+    ## Run 7 stress 0.08076341 
+    ## ... Procrustes: rmse 0.01057487  max resid 0.03255888 
     ## Run 8 stress 0.08616061 
-    ## Run 9 stress 0.08616061 
-    ## Run 10 stress 0.1320348 
-    ## Run 11 stress 0.08616061 
+    ## Run 9 stress 0.08076338 
+    ## ... Procrustes: rmse 0.01053062  max resid 0.03241459 
+    ## Run 10 stress 0.1297738 
+    ## Run 11 stress 0.09477189 
     ## Run 12 stress 0.08616061 
-    ## Run 13 stress 0.08076346 
-    ## ... Procrustes: rmse 0.01061576  max resid 0.03269269 
-    ## Run 14 stress 0.1212044 
-    ## Run 15 stress 0.08076338 
-    ## ... Procrustes: rmse 0.01054146  max resid 0.03244999 
-    ## Run 16 stress 0.08076336 
-    ## ... Procrustes: rmse 0.01048915  max resid 0.03227912 
+    ## Run 13 stress 0.09477192 
+    ## Run 14 stress 0.1297738 
+    ## Run 15 stress 0.08616061 
+    ## Run 16 stress 0.09477207 
     ## Run 17 stress 0.08616061 
-    ## Run 18 stress 0.1212044 
-    ## Run 19 stress 0.0947721 
+    ## Run 18 stress 0.08616061 
+    ## Run 19 stress 0.132615 
     ## Run 20 stress 0.08616061 
     ## *** Best solution repeated 1 times
 
